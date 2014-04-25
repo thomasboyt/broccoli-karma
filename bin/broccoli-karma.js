@@ -7,9 +7,15 @@ var spawn = require('child_process').spawn;
 var broccoli = require('broccoli');
 var watch = require('../src/watch');
 
+var dest = process.argv[2];
+
+if ( !dest ) {
+  throw new Error('No destination path specified!');
+}
+
 // start broccoli builder + karma runner/watcher
 var tree = broccoli.loadBrocfile();
-watch(new broccoli.Builder(tree), 'dist');
+watch(new broccoli.Builder(tree), dest);
 
 // check that karma.conf.js exists
 try {
