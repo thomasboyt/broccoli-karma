@@ -1,0 +1,21 @@
+{
+  "name": "broccoli-karma",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "bin": {
+    "broccoli-karma": "bin/broccoli-karma.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "rimraf": "^2.2.6",
+    "ncp": "^0.5.1",
+    "rsvp": "^3.0.6",
+    "broccoli": "^0.9.0",
+    "karma": "^0.12.10"
+  }
+}
