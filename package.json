@@ -1,6 +1,6 @@
 {
   "name": "broccoli-karma",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "CLI app that wraps Broccoli's watcher and Karma's runner, so that Karma will run on Broccoli builds.",
   "main": "src/watch.js",
   "bin": {
