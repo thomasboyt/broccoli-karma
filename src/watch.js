@@ -1,7 +1,8 @@
 var path = require('path');
 var util = require('./util');
+var RSVP = require('rsvp');
 
-var Watcher = require('broccoli').Watcher;
+var Watcher = require('broccoli/lib/watcher');
 
 var runner = require('karma').runner;
 
@@ -10,7 +11,6 @@ module.exports = function(builder, outputDir, options) {
 
   var watcher = new Watcher(builder);
   var currentCopy = null;
-  var didInitialBuild = false;
 
   // We register these so the 'exit' handler removing temp dirs is called
   process.on('SIGINT', function () {
@@ -21,28 +21,36 @@ module.exports = function(builder, outputDir, options) {
   });
 
   watcher.on('change', function(dir) {
-    // Ignore intiial build
-    if ( !didInitialBuild ) {
-      didInitialBuild = true;
-      return;
-    }
-
     // Don't allow two copies to happen simultaneously - chain off of existing copy
     if (currentCopy) {
-      currentCopy = currentCopy.finally(function() {
-        currentCopy = cleanAndCopy(dir, outputDir);
+      currentCopy = currentCopy.catch(function(error) {
+        if (error.code !== 'ENOENT') {
+          // ENOENT is allowed, as it means that the temp dir was cleared before it had a chance to
+          // copy.
+          console.error(error.stack);
+          process.exit(1);
+        }
+      }).then(function() {
+        return cleanAndCopy(dir.directory, outputDir);
       });
     } else {
-      currentCopy = cleanAndCopy(dir, outputDir);
+      currentCopy = cleanAndCopy(dir.directory, outputDir);
     }
 
-    currentCopy.then(function() {
-      // empty function is passed so that it doesn't exit after running
-      runner.run({
-        port: 9876,
-        configFile: path.resolve('karma.conf.js')
-      }, function() {});
-      currentCopy = null;
+    var previous = currentCopy;
+    var next = currentCopy.then(function() {
+      if (previous !== currentCopy) {
+        // more actions have been chained, skipping
+        return;
+      }
+      currentCopy = next;
+      return new RSVP.Promise(function (resolve, reject) {
+        // Need to wait for the previous runner to finish
+        runner.run({
+          port: 9876,
+          configFile: path.resolve('karma.conf.js')
+        }, resolve);
+      });
     });
   });
 
@@ -57,11 +65,5 @@ module.exports = function(builder, outputDir, options) {
 function cleanAndCopy (dir, outputDir) {
   return util.rmDir(outputDir).then(function() {
     return util.copyDir(dir, outputDir);
-  }).catch(function(errors) {
-    if (errors[0].code !== 'ENOENT') {
-      // ENOENT is allowed, as it means that the temp dir was cleared before it had a chance to
-      // copy.
-      throw errors[0];
-    }
   });
 }
